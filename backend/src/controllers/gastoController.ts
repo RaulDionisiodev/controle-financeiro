@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { criarGasto, listarGastos } from '../services/gastoService.js';
+import { criarGasto, listarGastos, gerarMensagemMensal } from '../services/gastoService.js';
 
 export async function criar(req: Request, res: Response) {
   try {
@@ -23,4 +23,16 @@ export async function listar(req: Request, res: Response) {
 
   const gastos = await listarGastos(mes, ano);
   return res.json(gastos);
+}
+
+export async function mensagem(req: Request, res: Response) {
+  const mes = Number(req.query.mes);
+  const ano = Number(req.query.ano);
+
+  if (!mes || !ano || mes < 1 || mes > 12) {
+    return res.status(400).json({ erro: 'Informe "mes" (1-12) e "ano" válidos via query string' });
+  }
+
+  const texto = await gerarMensagemMensal(mes, ano);
+  return res.json({ mensagem: texto });
 }
