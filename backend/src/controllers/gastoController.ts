@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { criarGasto, listarGastos, gerarMensagemMensal } from '../services/gastoService.js';
+import { criarGasto, listarGastos, gerarMensagemMensal, deletarGasto, atualizarGasto } from '../services/gastoService.js';
 
 export async function criar(req: Request, res: Response) {
   try {
@@ -35,4 +35,42 @@ export async function mensagem(req: Request, res: Response) {
 
   const texto = await gerarMensagemMensal(mes, ano);
   return res.json({ mensagem: texto });
+}
+
+export async function atualizar(req: Request, res: Response) {
+  const { id } = req.params;
+
+  if (typeof id !== 'string') {
+    return res.status(400).json({ erro: 'Parâmetro "id" inválido' });
+  }
+
+  try {
+    const gasto = await atualizarGasto(id, req.body);
+    return res.json(gasto);
+  } catch (error) {
+    if (error instanceof Error) {
+      const status = error.message === 'Gasto não encontrado' ? 404 : 400;
+      return res.status(status).json({ erro: error.message });
+    }
+    return res.status(500).json({ erro: 'Erro interno do servidor' });
+  }
+}
+
+export async function deletar(req: Request, res: Response) {
+  const { id } = req.params;
+
+  if (typeof id !== 'string') {
+    return res.status(400).json({ erro: 'Parâmetro "id" inválido' });
+  }
+
+  try {
+    await deletarGasto(id);
+    return res.status(204).send();
+  } catch (error) {
+    if (error instanceof Error) {
+      const status = error.message === 'Gasto não encontrado' ? 404 : 400;
+      return res.status(status).json({ erro: error.message });
+    }
+    return res.status(500).json({ erro: 'Erro interno do servidor' });
+  }
 }

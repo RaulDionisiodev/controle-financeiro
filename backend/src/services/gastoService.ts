@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { Categoria } from '../generated/prisma/client.js';
+import { Categoria, Prisma } from '../generated/prisma/client.js';
 
 interface CriarGastoInput {
   categoria: Categoria;
@@ -98,4 +98,39 @@ export async function gerarMensagemMensal(mes: number, ano: number): Promise<str
   mensagem += `💰 *Total do mês: ${formatarMoeda(totalGeral)}*`;
 
   return mensagem;
+}
+
+export async function atualizarGasto(id: string, input: CriarGastoInput) {
+  if (input.dividido && input.categoria !== Categoria.TRANSPORTE) {
+    throw new Error('O campo "dividido" só é válido para a categoria transporte');
+  }
+
+  try {
+    return await prisma.gasto.update({
+      where: { id },
+      data: {
+        categoria: input.categoria,
+        data: input.data,
+        descricao: input.descricao,
+        valor: input.valor,
+        dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new Error('Gasto não encontrado');
+    }
+    throw error;
+  }
+}
+
+export async function deletarGasto(id: string) {
+  try {
+    await prisma.gasto.delete({ where: { id } });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      throw new Error('Gasto não encontrado');
+    }
+    throw error;
+  }
 }
