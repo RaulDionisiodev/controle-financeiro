@@ -11,3 +11,23 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum Categoria {
+  COMPRAS
+  SERVICOS
+  PARCELAMENTOS
+  TRANSPORTE
+}
+
+model Gasto {
+  id          String    @id @default(uuid())
+  categoria   Categoria
+  data        DateTime
+  descricao   String
+  valor       Decimal   @db.Decimal(10, 2)
+  dividido    Boolean?
+  criadoEm    DateTime  @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@map("gastos")
+}
