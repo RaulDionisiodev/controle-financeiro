@@ -24,3 +24,20 @@ export async function criarGasto(input: CriarGastoInput) {
     },
   });
 }
+
+export async function listarGastos(mes: number, ano: number) {
+  const inicio = new Date(ano, mes - 1, 1);
+  const fim = new Date(ano, mes, 1); // primeiro dia do mês seguinte
+
+  return prisma.gasto.findMany({
+    where: {
+      data: {
+        gte: inicio,
+        lt: fim,
+      },
+    },
+    orderBy: {
+      data: 'asc',
+    },
+  });
+}

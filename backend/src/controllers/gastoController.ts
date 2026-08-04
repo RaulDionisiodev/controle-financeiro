@@ -1,5 +1,5 @@
 import type { Request, Response } from 'express';
-import { criarGasto } from '../services/gastoService.js';
+import { criarGasto, listarGastos } from '../services/gastoService.js';
 
 export async function criar(req: Request, res: Response) {
   try {
@@ -11,4 +11,16 @@ export async function criar(req: Request, res: Response) {
     }
     return res.status(500).json({ erro: 'Erro interno do servidor' });
   }
+}
+
+export async function listar(req: Request, res: Response) {
+  const mes = Number(req.query.mes);
+  const ano = Number(req.query.ano);
+
+  if (!mes || !ano || mes < 1 || mes > 12) {
+    return res.status(400).json({ erro: 'Informe "mes" (1-12) e "ano" válidos via query string' });
+  }
+
+  const gastos = await listarGastos(mes, ano);
+  return res.json(gastos);
 }
