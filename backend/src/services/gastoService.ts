@@ -1,13 +1,7 @@
 import { prisma } from '../config/prisma.js';
 import { Categoria, Prisma } from '../generated/prisma/client.js';
+import type { GastoInput } from '../schemas/gastoSchema.js';
 
-interface CriarGastoInput {
-  categoria: Categoria;
-  data: Date;
-  descricao: string;
-  valor: number;
-  dividido?: boolean;
-}
 
 const CATEGORIA_LABELS: Record<Categoria, { emoji: string; nome: string }> = {
   COMPRAS: { emoji: '🛒', nome: 'Compras' },
@@ -21,10 +15,7 @@ const MESES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-export async function criarGasto(input: CriarGastoInput) {
-  if (input.dividido && input.categoria !== Categoria.TRANSPORTE) {
-    throw new Error('O campo "dividido" só é válido para a categoria transporte');
-  }
+export async function criarGasto(input: GastoInput) {
 
   return prisma.gasto.create({
     data: {
@@ -100,10 +91,7 @@ export async function gerarMensagemMensal(mes: number, ano: number): Promise<str
   return mensagem;
 }
 
-export async function atualizarGasto(id: string, input: CriarGastoInput) {
-  if (input.dividido && input.categoria !== Categoria.TRANSPORTE) {
-    throw new Error('O campo "dividido" só é válido para a categoria transporte');
-  }
+export async function atualizarGasto(id: string, input: GastoInput) {
 
   try {
     return await prisma.gasto.update({
