@@ -46,7 +46,9 @@ export async function listarGastos(mes: number, ano: number) {
 }
 
 function formatarMoeda(valor: number): string {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return valor
+    .toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+    .replace(/\u00A0/g, ' ');
 }
 
 function formatarData(data: Date): string {
