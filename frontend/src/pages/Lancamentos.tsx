@@ -1,15 +1,19 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useMesAno } from '../hooks/useMesAno';
-import { listarGastos, excluirGasto } from '../services/gastoService';
-import type { Gasto } from '../types/gasto';
+import { listarGastos, excluirGasto, criarGasto, atualizarGasto } from '../services/gastoService';
+import type { Gasto, GastoInput } from '../types/gasto';
 import SeletorMesAno from '../components/SeletorMesAno';
 import GastoCard from '../components/GastoCard';
+import Modal from '../components/Modal';
+import GastoForm from '../components/GastoForm';
 
 function Lancamentos() {
   const { mes, ano, mesAnterior, proximoMes } = useMesAno();
   const [gastos, setGastos] = useState<Gasto[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [modalAberto, setModalAberto] = useState(false);
+  const [gastoEditando, setGastoEditando] = useState<Gasto | null>(null);
 
   const carregarGastos = useCallback(async () => {
     setCarregando(true);
@@ -34,15 +38,34 @@ function Lancamentos() {
     carregarGastos();
   }
 
+  function handleNovoGasto() {
+    setGastoEditando(null);
+    setModalAberto(true);
+  }
+
   function handleEditar(gasto: Gasto) {
-    console.log('Editar (implementaremos no próximo passo):', gasto);
+    setGastoEditando(gasto);
+    setModalAberto(true);
+  }
+
+  async function handleSalvar(dados: GastoInput) {
+    if (gastoEditando) {
+      await atualizarGasto(gastoEditando.id, dados);
+    } else {
+      await criarGasto(dados);
+    }
+    setModalAberto(false);
+    carregarGastos();
   }
 
   return (
     <div className="space-y-4">
       <SeletorMesAno mes={mes} ano={ano} onMesAnterior={mesAnterior} onProximoMes={proximoMes} />
 
-      <button className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700">
+      <button
+        onClick={handleNovoGasto}
+        className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
+      >
         + Novo gasto
       </button>
 
@@ -58,6 +81,18 @@ function Lancamentos() {
           <GastoCard key={gasto.id} gasto={gasto} onEditar={handleEditar} onExcluir={handleExcluir} />
         ))}
       </div>
+
+      <Modal
+        aberto={modalAberto}
+        titulo={gastoEditando ? 'Editar gasto' : 'Novo gasto'}
+        onFechar={() => setModalAberto(false)}
+      >
+        <GastoForm
+          gastoParaEditar={gastoEditando}
+          onSalvar={handleSalvar}
+          onCancelar={() => setModalAberto(false)}
+        />
+      </Modal>
     </div>
   );
 }
