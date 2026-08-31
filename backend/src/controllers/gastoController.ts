@@ -1,5 +1,7 @@
 import type { Request, Response } from 'express';
 import { criarGasto, listarGastos, gerarMensagemMensal, deletarGasto, atualizarGasto } from '../services/gastoService.js';
+import { periodoSchema } from '../schemas/gastoSchema.js';
+import { gerarMensagemPeriodo } from '../services/gastoService.js';
 
 export async function criar(req: Request, res: Response) {
   try {
@@ -23,18 +25,6 @@ export async function listar(req: Request, res: Response) {
 
   const gastos = await listarGastos(mes, ano);
   return res.json(gastos);
-}
-
-export async function mensagem(req: Request, res: Response) {
-  const mes = Number(req.query.mes);
-  const ano = Number(req.query.ano);
-
-  if (!mes || !ano || mes < 1 || mes > 12) {
-    return res.status(400).json({ erro: 'Informe "mes" (1-12) e "ano" válidos via query string' });
-  }
-
-  const texto = await gerarMensagemMensal(mes, ano);
-  return res.json({ mensagem: texto });
 }
 
 export async function atualizar(req: Request, res: Response) {
@@ -73,4 +63,34 @@ export async function deletar(req: Request, res: Response) {
     }
     return res.status(500).json({ erro: 'Erro interno do servidor' });
   }
+}
+
+export async function mensagem(req: Request, res: Response) {
+  const { mes, ano, dataInicio, dataFim } = req.query;
+
+  if (dataInicio && dataFim) {
+    const resultado = periodoSchema.safeParse({ dataInicio, dataFim });
+    if (!resultado.success) {
+      const erros = resultado.error.issues.map((issue) => ({
+        campo: issue.path.join('.'),
+        mensagem: issue.message,
+      }));
+      return res.status(400).json({ erro: 'Dados inválidos', detalhes: erros });
+    }
+
+    const texto = await gerarMensagemPeriodo(resultado.data.dataInicio, resultado.data.dataFim);
+    return res.json({ mensagem: texto });
+  }
+
+  const mesNum = Number(mes);
+  const anoNum = Number(ano);
+
+  if (!mesNum || !anoNum || mesNum < 1 || mesNum > 12) {
+    return res
+      .status(400)
+      .json({ erro: 'Informe "mes" e "ano", ou "dataInicio" e "dataFim" via query string' });
+  }
+
+  const texto = await gerarMensagemMensal(mesNum, anoNum);
+  return res.json({ mensagem: texto });
 }

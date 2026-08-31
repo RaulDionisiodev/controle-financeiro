@@ -23,4 +23,19 @@ export const gastoSchema = z
   })
   .meta({ id: 'Gasto', description: 'Dados de um gasto financeiro' });
 
+  export const periodoSchema = z
+  .object({
+    dataInicio: z.coerce.date(),
+    dataFim: z.coerce.date(),
+  })
+  .superRefine((dados, ctx) => {
+    if (dados.dataFim < dados.dataInicio) {
+      ctx.addIssue({
+        code: 'custom',
+        message: '"dataFim" deve ser maior ou igual a "dataInicio"',
+        path: ['dataFim'],
+      });
+    }
+  });
+
 export type GastoInput = z.infer<typeof gastoSchema>;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { criarGasto, gerarMensagemMensal } from './gastoService.js';
+import { criarGasto, gerarMensagemMensal, gerarMensagemPeriodo } from './gastoService.js';
 import { prisma } from '../config/prisma.js';
 import { Categoria } from '../generated/prisma/client.js';
 
@@ -37,6 +37,35 @@ describe('gastoService', () => {
     const mensagem = await gerarMensagemMensal(8, 2026);
 
     expect(mensagem).toContain('R$ 50,00');
-    expect(mensagem).toContain('Total do mês: R$ 50,00');
+    expect(mensagem).toContain('Total do período: R$ 50,00');
   });
+});
+
+it('gera mensagem para um período personalizado (não alinhado a um mês)', async () => {
+  await criarGasto({
+    categoria: Categoria.COMPRAS,
+    data: new Date('2026-07-20'),
+    descricao: 'Compra em julho',
+    valor: 50,
+  });
+  await criarGasto({
+    categoria: Categoria.COMPRAS,
+    data: new Date('2026-08-10'),
+    descricao: 'Compra em agosto',
+    valor: 70,
+  });
+  await criarGasto({
+    categoria: Categoria.COMPRAS,
+    data: new Date('2026-08-20'),
+    descricao: 'Fora do período',
+    valor: 999,
+  });
+
+  const mensagem = await gerarMensagemPeriodo(new Date('2026-07-15'), new Date('2026-08-15'));
+
+  expect(mensagem).toContain('15/07/2026 a 15/08/2026');
+  expect(mensagem).toContain('Compra em julho');
+  expect(mensagem).toContain('Compra em agosto');
+  expect(mensagem).not.toContain('Fora do período');
+  expect(mensagem).toContain('Total do período: R$ 120,00');
 });
