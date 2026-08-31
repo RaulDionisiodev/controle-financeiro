@@ -1,14 +1,25 @@
 import { useState } from 'react';
 import { useMesAno } from '../hooks/useMesAno';
 import { useContatos } from '../hooks/useContatos';
-import { gerarMensagem } from '../services/gastoService';
+import { gerarMensagem, gerarMensagemPeriodo } from '../services/gastoService';
 import SeletorMesAno from '../components/SeletorMesAno';
 import Modal from '../components/Modal';
 import GerenciarContatos from '../components/GerenciarContatos';
 
+type Modo = 'mes' | 'periodo';
+
+function hojeISO(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
 function Resumo() {
   const { mes, ano, mesAnterior, proximoMes } = useMesAno();
   const { contatos, adicionarContato, removerContato } = useContatos();
+
+  const [modo, setModo] = useState<Modo>('mes');
+  const [dataInicio, setDataInicio] = useState(hojeISO());
+  const [dataFim, setDataFim] = useState(hojeISO());
+
   const [mensagem, setMensagem] = useState('');
   const [gerando, setGerando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
@@ -21,10 +32,13 @@ function Resumo() {
     setErro(null);
     setMensagem('');
     try {
-      const resultado = await gerarMensagem(mes, ano);
+      const resultado =
+        modo === 'mes'
+          ? await gerarMensagem(mes, ano)
+          : await gerarMensagemPeriodo(dataInicio, dataFim);
       setMensagem(resultado.mensagem);
-    } catch {
-      setErro('Não foi possível gerar a mensagem.');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível gerar a mensagem.');
     } finally {
       setGerando(false);
     }
@@ -45,7 +59,49 @@ function Resumo() {
 
   return (
     <div className="space-y-4">
-      <SeletorMesAno mes={mes} ano={ano} onMesAnterior={mesAnterior} onProximoMes={proximoMes} />
+      <div className="flex bg-white rounded-xl border border-slate-200 p-1">
+        <button
+          onClick={() => setModo('mes')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+            modo === 'mes' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Mês
+        </button>
+        <button
+          onClick={() => setModo('periodo')}
+          className={`flex-1 py-2 rounded-lg text-sm font-medium ${
+            modo === 'periodo' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          Período personalizado
+        </button>
+      </div>
+
+      {modo === 'mes' ? (
+        <SeletorMesAno mes={mes} ano={ano} onMesAnterior={mesAnterior} onProximoMes={proximoMes} />
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 p-4 flex flex-col sm:flex-row gap-3">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">De</label>
+            <input
+              type="date"
+              value={dataInicio}
+              onChange={(e) => setDataInicio(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-slate-700 mb-1">Até</label>
+            <input
+              type="date"
+              value={dataFim}
+              onChange={(e) => setDataFim(e.target.value)}
+              className="w-full border border-slate-300 rounded-lg px-3 py-2"
+            />
+          </div>
+        </div>
+      )}
 
       <button
         onClick={handleGerar}

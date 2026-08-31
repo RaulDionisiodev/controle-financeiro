@@ -26,3 +26,9 @@ export function excluirGasto(id: string) {
 export function gerarMensagem(mes: number, ano: number) {
   return apiFetch<{ mensagem: string }>(`/gastos/mensagem?mes=${mes}&ano=${ano}`);
 }
+
+export function gerarMensagemPeriodo(dataInicio: string, dataFim: string) {
+  return apiFetch<{ mensagem: string }>(
+    `/gastos/mensagem?dataInicio=${dataInicio}&dataFim=${dataFim}`
+  );
+}
