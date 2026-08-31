@@ -1,6 +1,8 @@
 import { prisma } from '../config/prisma.js';
 import { Categoria, Prisma } from '../generated/prisma/client.js';
 import type { GastoInput } from '../schemas/gastoSchema.js';
+import { logger } from '../config/logger.js';
+import { Sentry } from '../config/sentry.js';
 
 
 const CATEGORIA_LABELS: Record<Categoria, { emoji: string; nome: string }> = {
@@ -16,8 +18,7 @@ const MESES = [
 ];
 
 export async function criarGasto(input: GastoInput) {
-
-  return prisma.gasto.create({
+  const gasto = await prisma.gasto.create({
     data: {
       categoria: input.categoria,
       data: input.data,
@@ -26,6 +27,11 @@ export async function criarGasto(input: GastoInput) {
       dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
     },
   });
+
+  logger.info({ gastoId: gasto.id, categoria: gasto.categoria }, 'Gasto criado');
+  Sentry.logger.info('Gasto criado', { gastoId: gasto.id, categoria: gasto.categoria });
+
+  return gasto;
 }
 
 function formatarMoeda(valor: number): string {

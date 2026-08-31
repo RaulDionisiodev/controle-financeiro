@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { criarGasto, listarGastos, gerarMensagemMensal, deletarGasto, atualizarGasto } from '../services/gastoService.js';
 import { periodoSchema } from '../schemas/gastoSchema.js';
 import { gerarMensagemPeriodo } from '../services/gastoService.js';
+import { Sentry } from '../config/sentry.js';
 
 export async function criar(req: Request, res: Response) {
   try {
@@ -11,6 +12,7 @@ export async function criar(req: Request, res: Response) {
     if (error instanceof Error) {
       return res.status(400).json({ erro: error.message });
     }
+    Sentry.captureException(error);
     return res.status(500).json({ erro: 'Erro interno do servidor' });
   }
 }
@@ -42,6 +44,7 @@ export async function atualizar(req: Request, res: Response) {
       const status = error.message === 'Gasto não encontrado' ? 404 : 400;
       return res.status(status).json({ erro: error.message });
     }
+    Sentry.captureException(error);
     return res.status(500).json({ erro: 'Erro interno do servidor' });
   }
 }
@@ -61,6 +64,7 @@ export async function deletar(req: Request, res: Response) {
       const status = error.message === 'Gasto não encontrado' ? 404 : 400;
       return res.status(status).json({ erro: error.message });
     }
+    Sentry.captureException(error);
     return res.status(500).json({ erro: 'Erro interno do servidor' });
   }
 }
