@@ -68,6 +68,8 @@ export async function atualizarGasto(id: string, input: GastoInput) {
 export async function deletarGasto(id: string) {
   try {
     await prisma.gasto.delete({ where: { id } });
+    logger.info({ gastoId: id }, 'Gasto excluído');
+    Sentry.logger.info('Gasto excluído', { gastoId: id });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
       throw new Error('Gasto não encontrado');
