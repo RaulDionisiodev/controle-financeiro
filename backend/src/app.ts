@@ -7,12 +7,16 @@ import type { RequestHandler } from 'express';
 import { openApiDocument } from './docs/openapi.js';
 import { logger } from './config/logger.js';
 import { Sentry } from './config/sentry.js';
+import cookieParser from 'cookie-parser';
+import authRoutes from './routes/authRoutes.js';
+import { requireAuth } from './middlewares/auth.js';
 
 const pinoHttp = pinoHttpImport as unknown as (options?: Record<string, unknown>) => RequestHandler;
 export const app = express();
 
-app.use(cors());
+app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 app.use(pinoHttp({ logger }));
 
 app.get('/health', (req, res) => {
@@ -24,6 +28,7 @@ app.get('/openapi.json', (req, res) => {
 });
 app.use('/docs', swaggerUi.serve, swaggerUi.setup(openApiDocument));
 
-app.use(gastoRoutes);
+app.use(authRoutes);
+app.use(requireAuth, gastoRoutes);
 
 Sentry.setupExpressErrorHandler(app);
