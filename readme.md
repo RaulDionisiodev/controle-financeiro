@@ -174,7 +174,7 @@ A documentação interativa (Swagger UI), gerada automaticamente a partir dos sc
 - **Logs locais**: estruturados via [Pino](https://getpino.io), com formatação legível em desenvolvimento e JSON puro em produção
 - **Monitoramento em nuvem**: [Sentry](https://sentry.io) captura erros não tratados, rastreamento de performance (incluindo spans de banco de dados via Prisma) e logs estruturados de eventos de negócio (ex: criação/exclusão de gastos)
 
-## Autenticação
+## Autenticação 
 
 O login é feito exclusivamente via **Google OAuth**, usando o Google Identity Services no frontend. O fluxo:
 
