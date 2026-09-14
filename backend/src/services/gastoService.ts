@@ -17,6 +17,8 @@ const MESES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
+type GastoRegistro = Awaited<ReturnType<typeof buscarGastosPeriodo>>[number];
+
 export async function criarGasto(input: GastoInput) {
   const gasto = await prisma.gasto.create({
     data: {
@@ -100,13 +102,34 @@ function formatarDataLonga(data: Date): string {
   return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
 }
 
+function renderizarSecao(
+  titulo: string,
+  gastosSecao: GastoRegistro[],
+  opcoes: { dividirValor: boolean }
+): { texto: string; subtotal: number } {
+  let texto = `${titulo}\n`;
+  let subtotal = 0;
+
+  for (const gasto of gastosSecao) {
+    const valor = Number(gasto.valor);
+    const valorConsiderado = opcoes.dividirValor ? valor / 2 : valor;
+    subtotal += valorConsiderado;
+
+    const sufixo = opcoes.dividirValor
+      ? ` (dividido - 50%: ${formatarMoeda(valorConsiderado)})`
+      : '';
+    texto += `- ${formatarData(gasto.data)} ${gasto.descricao}: ${formatarMoeda(valor)}${sufixo}\n`;
+  }
+
+  texto += `Subtotal: ${formatarMoeda(subtotal)}\n\n`;
+  return { texto, subtotal };
+}
+
 export async function gerarMensagemPeriodo(
   dataInicio: Date,
   dataFim: Date,
   tituloPersonalizado?: string
 ): Promise<string> {
-  // dataFim é inclusiva (o próprio dia 15/08 deve entrar) — por isso avançamos 1 dia
-  // para transformar em limite exclusivo na consulta.
   const fimExclusivo = new Date(dataFim);
   fimExclusivo.setDate(fimExclusivo.getDate() + 1);
 
@@ -124,23 +147,30 @@ export async function gerarMensagemPeriodo(
     const gastosCategoria = gastos.filter((g) => g.categoria === categoria);
     if (gastosCategoria.length === 0) continue;
 
-    const { emoji, nome } = CATEGORIA_LABELS[categoria];
-    mensagem += `${emoji} *${nome}*\n`;
+    if (categoria === Categoria.TRANSPORTE) {
+      const naoDivididos = gastosCategoria.filter((g) => !g.dividido);
+      const divididos = gastosCategoria.filter((g) => g.dividido);
 
-    let subtotal = 0;
-    for (const gasto of gastosCategoria) {
-      const valor = Number(gasto.valor);
-      const valorConsiderado = gasto.dividido ? valor / 2 : valor;
-      subtotal += valorConsiderado;
+      if (naoDivididos.length > 0) {
+        const { emoji, nome } = CATEGORIA_LABELS[categoria];
+        const secao = renderizarSecao(`${emoji} *${nome}*`, naoDivididos, { dividirValor: false });
+        mensagem += secao.texto;
+        totalGeral += secao.subtotal;
+      }
 
-      const sufixo = gasto.dividido
-        ? ` (dividido - 50%: ${formatarMoeda(valorConsiderado)})`
-        : '';
-      mensagem += `- ${formatarData(gasto.data)} ${gasto.descricao}: ${formatarMoeda(valor)}${sufixo}\n`;
+      if (divididos.length > 0) {
+        const secao = renderizarSecao('⛪️ *Igreja com a Mazé*', divididos, { dividirValor: true });
+        mensagem += secao.texto;
+        totalGeral += secao.subtotal;
+      }
+
+      continue;
     }
 
-    mensagem += `Subtotal: ${formatarMoeda(subtotal)}\n\n`;
-    totalGeral += subtotal;
+    const { emoji, nome } = CATEGORIA_LABELS[categoria];
+    const secao = renderizarSecao(`${emoji} *${nome}*`, gastosCategoria, { dividirValor: false });
+    mensagem += secao.texto;
+    totalGeral += secao.subtotal;
   }
 
   mensagem += `💰 *Total do período: ${formatarMoeda(totalGeral)}*`;

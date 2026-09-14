@@ -39,33 +39,59 @@ describe('gastoService', () => {
     expect(mensagem).toContain('R$ 50,00');
     expect(mensagem).toContain('Total do período: R$ 50,00');
   });
-});
 
-it('gera mensagem para um período personalizado (não alinhado a um mês)', async () => {
-  await criarGasto({
-    categoria: Categoria.COMPRAS,
-    data: new Date('2026-07-20'),
-    descricao: 'Compra em julho',
-    valor: 50,
-  });
-  await criarGasto({
-    categoria: Categoria.COMPRAS,
-    data: new Date('2026-08-10'),
-    descricao: 'Compra em agosto',
-    valor: 70,
-  });
-  await criarGasto({
-    categoria: Categoria.COMPRAS,
-    data: new Date('2026-08-20'),
-    descricao: 'Fora do período',
-    valor: 999,
+
+  it('gera mensagem para um período personalizado (não alinhado a um mês)', async () => {
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-07-20'),
+      descricao: 'Compra em julho',
+      valor: 50,
+    });
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-08-10'),
+      descricao: 'Compra em agosto',
+      valor: 70,
+    });
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-08-20'),
+      descricao: 'Fora do período',
+      valor: 999,
+    });
+
+    const mensagem = await gerarMensagemPeriodo(new Date('2026-07-15'), new Date('2026-08-15'));
+
+    expect(mensagem).toContain('15/07/2026 a 15/08/2026');
+    expect(mensagem).toContain('Compra em julho');
+    expect(mensagem).toContain('Compra em agosto');
+    expect(mensagem).not.toContain('Fora do período');
+    expect(mensagem).toContain('Total do período: R$ 120,00');
   });
 
-  const mensagem = await gerarMensagemPeriodo(new Date('2026-07-15'), new Date('2026-08-15'));
+  it('separa gastos de transporte dividido em uma seção própria', async () => {
+    await criarGasto({
+      categoria: Categoria.TRANSPORTE,
+      data: new Date('2026-08-04'),
+      descricao: 'Uber para o trabalho',
+      valor: 100,
+      dividido: false,
+    });
+    await criarGasto({
+      categoria: Categoria.TRANSPORTE,
+      data: new Date('2026-08-05'),
+      descricao: 'Uber com a Mazé',
+      valor: 60,
+      dividido: true,
+    });
 
-  expect(mensagem).toContain('15/07/2026 a 15/08/2026');
-  expect(mensagem).toContain('Compra em julho');
-  expect(mensagem).toContain('Compra em agosto');
-  expect(mensagem).not.toContain('Fora do período');
-  expect(mensagem).toContain('Total do período: R$ 120,00');
+    const mensagem = await gerarMensagemMensal(8, 2026);
+
+    expect(mensagem).toContain('🚗 *Transporte*');
+    expect(mensagem).toContain('Uber para o trabalho');
+    expect(mensagem).toContain('⛪️ *Igreja com a Mazé*');
+    expect(mensagem).toContain('Uber com a Mazé');
+    expect(mensagem).toContain('Total do período: R$ 130,00'); // 100 + (60/2)
+  });
 });
