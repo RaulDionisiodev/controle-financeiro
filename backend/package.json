@@ -11,7 +11,8 @@
     "db:test:migrate": "dotenv -e .env.test -- npx prisma migrate deploy",
     "db:test:studio": "dotenv -e .env.test -- npx prisma studio",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "start": "node dist/server.js"
   },
   "keywords": [],
   "author": "",
