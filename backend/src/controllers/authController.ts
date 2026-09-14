@@ -25,10 +25,12 @@ export async function loginGoogle(req: Request, res: Response) {
 
     const token = jwt.sign({ email, nome }, JWT_SECRET, { expiresIn: '7d' });
 
+    const emProducao = process.env.NODE_ENV === 'production';
+
     res.cookie(COOKIE_NOME, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      sameSite: emProducao ? 'none' : 'lax',
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
@@ -50,6 +52,11 @@ export function me(req: Request, res: Response) {
 }
 
 export function logout(req: Request, res: Response) {
-  res.clearCookie(COOKIE_NOME);
+  const emProducao = process.env.NODE_ENV === 'production';
+  res.clearCookie(COOKIE_NOME, {
+    httpOnly: true,
+    secure: emProducao,
+    sameSite: emProducao ? 'none' : 'lax',
+  });
   return res.status(204).send();
 }
