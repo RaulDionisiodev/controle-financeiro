@@ -95,8 +95,8 @@ async function buscarGastosPeriodo(inicio: Date, fimExclusivo: Date) {
 }
 
 export async function listarGastos(mes: number, ano: number) {
-  const inicio = new Date(ano, mes - 1, 1);
-  const fim = new Date(ano, mes, 1);
+  const inicio = new Date(Date.UTC(ano, mes - 1, 1));
+  const fim = new Date(Date.UTC(ano, mes, 1));
   return buscarGastosPeriodo(inicio, fim);
 }
 
@@ -141,7 +141,7 @@ export async function gerarMensagemPeriodo(
   tituloPersonalizado?: string
 ): Promise<string> {
   const fimExclusivo = new Date(dataFim);
-  fimExclusivo.setDate(fimExclusivo.getDate() + 1);
+  fimExclusivo.setUTCDate(fimExclusivo.getUTCDate() + 1);
 
   const gastos = await buscarGastosPeriodo(dataInicio, fimExclusivo);
   const titulo = tituloPersonalizado ?? `${formatarDataLonga(dataInicio)} a ${formatarDataLonga(dataFim)}`;
@@ -189,8 +189,8 @@ export async function gerarMensagemPeriodo(
 }
 
 export async function gerarMensagemMensal(mes: number, ano: number): Promise<string> {
-  const inicio = new Date(ano, mes - 1, 1);
-  const ultimoDia = new Date(ano, mes, 0); // dia 0 do mês seguinte = último dia do mês atual
+  const inicio = new Date(Date.UTC(ano, mes - 1, 1));
+  const ultimoDia = new Date(Date.UTC(ano, mes, 0)); // dia 0 do mês seguinte = último dia deste mês
   const titulo = `${MESES[mes - 1]}/${ano}`;
   return gerarMensagemPeriodo(inicio, ultimoDia, titulo);
 }

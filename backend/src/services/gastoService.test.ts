@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
-import { criarGasto, gerarMensagemMensal, gerarMensagemPeriodo } from './gastoService.js';
+import { criarGasto, gerarMensagemMensal, gerarMensagemPeriodo, listarGastos } from './gastoService.js';
 import { prisma } from '../config/prisma.js';
 import { Categoria, SentidoViagem } from '../generated/prisma/client.js';
 
@@ -103,5 +103,35 @@ describe('gastoService', () => {
 
     expect(mensagem).toContain('Uber para o trabalho (ida)');
     expect(mensagem).toContain('Uber para o trabalho (volta)');
+  });
+
+    it('lista no mês correto um gasto lançado no primeiro dia do mês', async () => {
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-11-01'),
+      descricao: 'Primeiro dia',
+      valor: 10,
+    });
+
+    const novembro = await listarGastos(11, 2026);
+    const outubro = await listarGastos(10, 2026);
+
+    expect(novembro).toHaveLength(1);
+    expect(outubro).toHaveLength(0);
+  });
+
+  it('inclui na mensagem mensal um gasto lançado no último dia do mês', async () => {
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-10-31'),
+      descricao: 'Último dia',
+      valor: 10,
+    });
+
+    const outubro = await gerarMensagemMensal(10, 2026);
+    const novembro = await gerarMensagemMensal(11, 2026);
+
+    expect(outubro).toContain('Último dia');
+    expect(novembro).not.toContain('Último dia');
   });
 });

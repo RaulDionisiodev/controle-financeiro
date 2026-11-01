@@ -5,12 +5,9 @@ import { gerarMensagem, gerarMensagemPeriodo } from '../services/gastoService';
 import SeletorMesAno from '../components/SeletorMesAno';
 import Modal from '../components/Modal';
 import GerenciarContatos from '../components/GerenciarContatos';
+import { hojeISO } from '../utils/data';
 
 type Modo = 'mes' | 'periodo';
-
-function hojeISO(): string {
-  return new Date().toISOString().split('T')[0];
-}
 
 function Resumo() {
   const { mes, ano, mesAnterior, proximoMes } = useMesAno();
