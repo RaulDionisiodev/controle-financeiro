@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { Categoria, Prisma } from '../generated/prisma/client.js';
+import { Categoria, Prisma, SentidoViagem } from '../generated/prisma/client.js';
 import type { GastoInput } from '../schemas/gastoSchema.js';
 import { logger } from '../config/logger.js';
 import { Sentry } from '../config/sentry.js';
@@ -27,6 +27,7 @@ export async function criarGasto(input: GastoInput) {
       descricao: input.descricao,
       valor: input.valor,
       dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
+      sentido: input.categoria === Categoria.TRANSPORTE ? (input.sentido ?? null) : null,
     },
   });
 
@@ -57,6 +58,7 @@ export async function atualizarGasto(id: string, input: GastoInput) {
         descricao: input.descricao,
         valor: input.valor,
         dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
+        sentido: input.categoria === Categoria.TRANSPORTE ? (input.sentido ?? null) : null,
       },
     });
   } catch (error) {
@@ -88,7 +90,7 @@ async function buscarGastosPeriodo(inicio: Date, fimExclusivo: Date) {
         lt: fimExclusivo,
       },
     },
-    orderBy: { data: 'asc' },
+    orderBy: [{ data: 'asc' }, { criadoEm: 'asc' }],
   });
 }
 
@@ -109,16 +111,24 @@ function renderizarSecao(
 ): { texto: string; subtotal: number } {
   let texto = `${titulo}\n`;
   let subtotal = 0;
+  const ROTULO_SENTIDO: Record<SentidoViagem, string> = { IDA: 'ida', VOLTA: 'volta' };
 
   for (const gasto of gastosSecao) {
     const valor = Number(gasto.valor);
     const valorConsiderado = opcoes.dividirValor ? valor / 2 : valor;
     subtotal += valorConsiderado;
-
+      
     const sufixo = opcoes.dividirValor
       ? ` (dividido - 50%: ${formatarMoeda(valorConsiderado)})`
       : '';
-    texto += `- ${formatarData(gasto.data)} ${gasto.descricao}: ${formatarMoeda(valor)}${sufixo}\n`;
+
+    const descricao = gasto.sentido
+      ? `${gasto.descricao} (${ROTULO_SENTIDO[gasto.sentido]})`
+      : gasto.descricao;
+
+    texto += `- ${formatarData(gasto.data)} ${descricao}: ${formatarMoeda(valor)}${sufixo}\n`;
+
+    //texto += `- ${formatarData(gasto.data)} ${gasto.descricao}: ${formatarMoeda(valor)}${sufixo}\n`;
   }
 
   texto += `Subtotal: ${formatarMoeda(subtotal)}\n\n`;

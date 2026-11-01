@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { criarGasto, gerarMensagemMensal, gerarMensagemPeriodo } from './gastoService.js';
 import { prisma } from '../config/prisma.js';
-import { Categoria } from '../generated/prisma/client.js';
+import { Categoria, SentidoViagem } from '../generated/prisma/client.js';
 
 describe('gastoService', () => {
   beforeEach(async () => {
@@ -93,5 +93,15 @@ describe('gastoService', () => {
     expect(mensagem).toContain('⛪️ *Igreja com a Mazé*');
     expect(mensagem).toContain('Uber com a Mazé');
     expect(mensagem).toContain('Total do período: R$ 130,00'); // 100 + (60/2)
+  });
+
+  it('inclui o sentido (ida/volta) ao lado da descrição na mensagem', async () => {
+    await criarGasto({ categoria: Categoria.TRANSPORTE, data: new Date('2026-08-04'), descricao: 'Uber para o trabalho', valor: 20, sentido: SentidoViagem.IDA });
+    await criarGasto({ categoria: Categoria.TRANSPORTE, data: new Date('2026-08-04'), descricao: 'Uber para o trabalho', valor: 22, sentido: SentidoViagem.VOLTA });
+
+    const mensagem = await gerarMensagemMensal(8, 2026);
+
+    expect(mensagem).toContain('Uber para o trabalho (ida)');
+    expect(mensagem).toContain('Uber para o trabalho (volta)');
   });
 });

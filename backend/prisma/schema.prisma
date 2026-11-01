@@ -12,6 +12,11 @@ datasource db {
   provider = "postgresql"
 }
 
+enum SentidoViagem {
+  IDA
+  VOLTA
+}
+
 enum Categoria {
   COMPRAS
   SERVICOS
@@ -26,6 +31,7 @@ model Gasto {
   descricao   String
   valor       Decimal   @db.Decimal(10, 2)
   dividido    Boolean?
+  sentido      SentidoViagem?
   criadoEm    DateTime  @default(now())
   atualizadoEm DateTime @updatedAt
 

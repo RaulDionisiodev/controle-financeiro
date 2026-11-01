@@ -62,6 +62,24 @@ describe('Rotas de Gastos', () => {
         resposta.body.detalhes.some((d: { campo: string }) => d.campo === 'dividido')
       ).toBe(true);
     });
+    it('cria gasto de transporte com sentido', async () => {
+      const resposta = await request(app)
+        .post('/gastos')
+        .set('Cookie', cookieAutenticado)
+        .send({ categoria: 'TRANSPORTE', data: '2026-08-04', descricao: 'Uber', valor: 25.5, sentido: 'IDA' });
+
+      expect(resposta.status).toBe(201);
+      expect(resposta.body.sentido).toBe('IDA');
+    });
+
+    it('retorna 400 quando "sentido" é usado fora da categoria transporte', async () => {
+      const resposta = await request(app)
+        .post('/gastos')
+        .set('Cookie', cookieAutenticado)
+        .send({ categoria: 'COMPRAS', data: '2026-08-04', descricao: 'Mercado', valor: 100, sentido: 'IDA' });
+
+      expect(resposta.status).toBe(400);
+    });
   });
 
   describe('GET /gastos', () => {
