@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Categoria } from '../generated/prisma/client.js';
+import { Categoria, SentidoViagem } from '../generated/prisma/client.js';
 
 export const gastoSchema = z
   .object({
@@ -11,6 +11,7 @@ export const gastoSchema = z
       .boolean()
       .optional()
       .meta({ description: 'Válido apenas para transporte: divide o valor em 50%' }),
+    sentido: z.enum(SentidoViagem).optional().meta({ description: 'Válido apenas para transporte: ida ou volta' }),  
   })
   .superRefine((dados, ctx) => {
     if (dados.dividido && dados.categoria !== Categoria.TRANSPORTE) {
@@ -18,6 +19,13 @@ export const gastoSchema = z
         code: 'custom',
         message: 'O campo "dividido" só é válido para a categoria transporte',
         path: ['dividido'],
+      });
+    }
+    if (dados.sentido && dados.categoria !== Categoria.TRANSPORTE) {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'O campo "sentido" só é válido para a categoria transporte',
+        path: ['sentido'],
       });
     }
   })

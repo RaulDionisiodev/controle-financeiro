@@ -7,6 +7,8 @@ const CATEGORIA_INFO: Record<Gasto['categoria'], { emoji: string; label: string 
   TRANSPORTE: { emoji: '🚗', label: 'Transporte' },
 };
 
+const SENTIDO_LABEL = { IDA: 'Ida', VOLTA: 'Volta' } as const;
+
 function formatarMoeda(valor: string): string {
   return Number(valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
@@ -32,6 +34,7 @@ function GastoCard({ gasto, onEditar, onExcluir }: GastoCardProps) {
           <p className="font-medium text-slate-800 truncate">{gasto.descricao}</p>
           <p className="text-sm text-slate-500">
             {label} · {formatarData(gasto.data)}
+            {gasto.sentido && ` · ${SENTIDO_LABEL[gasto.sentido]}`}
             {gasto.dividido && ' · Dividido'}
           </p>
         </div>
