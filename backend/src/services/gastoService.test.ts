@@ -134,4 +134,39 @@ describe('gastoService', () => {
     expect(outubro).toContain('Último dia');
     expect(novembro).not.toContain('Último dia');
   });
+
+  it('formata a mensagem com datas e subtotais em negrito e o espaçamento definido', async () => {
+    await criarGasto({
+      categoria: Categoria.COMPRAS,
+      data: new Date('2026-08-04'),
+      descricao: 'Mercado',
+      valor: 150,
+    });
+    await criarGasto({
+      categoria: Categoria.SERVICOS,
+      data: new Date('2026-08-05'),
+      descricao: 'Corte de cabelo',
+      valor: 50,
+    });
+
+    const mensagem = await gerarMensagemMensal(8, 2026);
+
+    const esperado = [
+      '📅 *Resumo Financeiro - Agosto/2026*',
+      '', '',
+      '🛒 *Compras*',
+      '- *04/08* - Mercado: R$ 150,00',
+      '',
+      '*Subtotal: R$ 150,00*',
+      '', '',
+      '🔧 *Serviços*',
+      '- *05/08* - Corte de cabelo: R$ 50,00',
+      '',
+      '*Subtotal: R$ 50,00*',
+      '', '',
+      '💰 *Total do período: R$ 200,00*',
+    ].join('\n');
+
+    expect(mensagem).toBe(esperado);
+  });
 });
