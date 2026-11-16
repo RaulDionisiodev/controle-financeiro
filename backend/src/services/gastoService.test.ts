@@ -153,7 +153,7 @@ describe('gastoService', () => {
 
     const esperado = [
       '📅 *Resumo Financeiro - Agosto/2026*',
-      '', '', '',
+      '', '',
       '🛒 *Compras*',
       '- *04/08* - Mercado: R$ 150,00',
       '',

@@ -18,7 +18,7 @@ const MESES = [
 ];
 
 // Espaçamento da mensagem (quantidade de linhas em branco)
-const LINHAS_APOS_TITULO = 3;
+const LINHAS_APOS_TITULO = 2;
 const LINHAS_ENTRE_SECOES = 2;
 const LINHAS_ANTES_SUBTOTAL = 1;
 
