@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import type { Gasto, GastoInput, Categoria, Sentido } from '../types/gasto';
-import { CATEGORIAS, SENTIDOS } from '../types/gasto';
+import type { Gasto, GastoInput, Categoria, Sentido, Grupo } from '../types/gasto';
+import { CATEGORIAS, SENTIDOS, GRUPOS, GRUPO_LABEL } from '../types/gasto';
 import { hojeISO } from '../utils/data';
 interface GastoFormProps {
   gastoParaEditar: Gasto | null;
@@ -13,7 +13,9 @@ function GastoForm({ gastoParaEditar, onSalvar, onCancelar }: GastoFormProps) {
   const [data, setData] = useState(hojeISO());
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
-  const [dividido, setDividido] = useState(false);
+  const [dividir, setDividir] = useState(false);
+  const [divisor, setDivisor] = useState(2);
+  const [grupo, setGrupo] = useState<Grupo | ''>('');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sentido, setSentido] = useState<Sentido | ''>('');
@@ -24,7 +26,9 @@ function GastoForm({ gastoParaEditar, onSalvar, onCancelar }: GastoFormProps) {
       setData(gastoParaEditar.data.split('T')[0]);
       setDescricao(gastoParaEditar.descricao);
       setValor(gastoParaEditar.valor);
-      setDividido(gastoParaEditar.dividido ?? false);
+      setDividir(gastoParaEditar.divisor !== null);
+      setDivisor(gastoParaEditar.divisor ?? 2);
+      setGrupo(gastoParaEditar.grupo ?? '');
       setSentido(gastoParaEditar.sentido ?? '');
     }
   }, [gastoParaEditar]);
@@ -39,7 +43,8 @@ function GastoForm({ gastoParaEditar, onSalvar, onCancelar }: GastoFormProps) {
         data,
         descricao,
         valor: Number(valor),
-        dividido: categoria === 'TRANSPORTE' ? dividido : undefined,
+        divisor: categoria === 'TRANSPORTE' && dividir ? divisor : undefined,
+        grupo: categoria === 'TRANSPORTE' && grupo ? grupo : undefined,
         sentido: categoria === 'TRANSPORTE' && sentido ? sentido : undefined,
       });
     } catch (e) {
@@ -48,6 +53,15 @@ function GastoForm({ gastoParaEditar, onSalvar, onCancelar }: GastoFormProps) {
       setSalvando(false);
     }
   }
+
+  const valorNumero = Number(valor);
+  const partePorPessoa =
+    dividir && valorNumero > 0
+      ? (Math.round((valorNumero * 100) / divisor) / 100).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+      })
+      : null;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -100,39 +114,90 @@ function GastoForm({ gastoParaEditar, onSalvar, onCancelar }: GastoFormProps) {
       </div>
 
       {categoria === 'TRANSPORTE' && (
-  <>
-    <div>
-      <span className="block text-sm font-medium text-slate-700 mb-1">Sentido</span>
-      <div className="flex gap-2">
-        {SENTIDOS.map((s) => (
-          <button
-            key={s.valor}
-            type="button"
-            aria-pressed={sentido === s.valor}
-            onClick={() => setSentido(sentido === s.valor ? '' : s.valor)}
-            className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium ${
-              sentido === s.valor
-                ? 'bg-blue-600 border-blue-600 text-white'
-                : 'border-slate-300 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            {s.label}
-          </button>
-        ))}
-      </div>
-    </div>
+        <>
+          <div>
+            <span className="block text-sm font-medium text-slate-700 mb-1">Sentido</span>
+            <div className="flex gap-2">
+              {SENTIDOS.map((s) => (
+                <button
+                  key={s.valor}
+                  type="button"
+                  aria-pressed={sentido === s.valor}
+                  onClick={() => setSentido(sentido === s.valor ? '' : s.valor)}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium ${sentido === s.valor
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-    <label className="flex items-center gap-2 text-sm text-slate-700">
-      <input
-        type="checkbox"
-        checked={dividido}
-        onChange={(e) => setDividido(e.target.checked)}
-        className="w-4 h-4"
-      />
-      Dividir valor (considera 50% no total)
-    </label>
-  </>
-)}
+          <div>
+            <span className="block text-sm font-medium text-slate-700 mb-1">Grupo</span>
+            <div className="flex flex-col sm:flex-row gap-2">
+              {GRUPOS.map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  aria-pressed={grupo === g}
+                  onClick={() => setGrupo(grupo === g ? '' : g)}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-sm font-medium ${grupo === g
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-slate-300 text-slate-600 hover:bg-slate-50'
+                    }`}
+                >
+                  {GRUPO_LABEL[g]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={dividir}
+              onChange={(e) => setDividir(e.target.checked)}
+              className="w-4 h-4"
+            />
+            Dividir valor entre pessoas
+          </label>
+
+          {dividir && (
+            <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-slate-700">Número de pessoas (inclui quem pagou)</span>
+                <div className="flex items-center gap-3 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setDivisor((d) => Math.max(2, d - 1))}
+                    disabled={divisor <= 2}
+                    aria-label="Diminuir número de pessoas"
+                    className="w-9 h-9 rounded-lg border border-slate-300 text-lg text-slate-600 disabled:opacity-40"
+                  >
+                    −
+                  </button>
+                  <span className="w-6 text-center font-semibold text-slate-800">{divisor}</span>
+                  <button
+                    type="button"
+                    onClick={() => setDivisor((d) => Math.min(20, d + 1))}
+                    disabled={divisor >= 20}
+                    aria-label="Aumentar número de pessoas"
+                    className="w-9 h-9 rounded-lg border border-slate-300 text-lg text-slate-600 disabled:opacity-40"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              {partePorPessoa && (
+                <p className="text-sm text-slate-500">Cada pessoa paga {partePorPessoa}</p>
+              )}
+            </div>
+          )}
+        </>
+      )}
 
       {erro && <p className="text-red-500 text-sm">{erro}</p>}
 
