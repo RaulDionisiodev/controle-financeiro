@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Categoria, SentidoViagem } from '../generated/prisma/client.js';
+import { Categoria, SentidoViagem, GrupoGasto } from '../generated/prisma/client.js';
 
 export const gastoSchema = z
   .object({
@@ -11,22 +11,26 @@ export const gastoSchema = z
       .boolean()
       .optional()
       .meta({ description: 'Válido apenas para transporte: divide o valor em 50%' }),
-    sentido: z.enum(SentidoViagem).optional().meta({ description: 'Válido apenas para transporte: ida ou volta' }),  
+    sentido: z.enum(SentidoViagem).optional().meta({ description: 'Válido apenas para transporte: ida ou volta' }),
+    divisor: z.number().int().min(2).max(20).optional().meta({
+      description: 'Válido apenas para transporte: número de pessoas que dividem o gasto (inclui quem pagou)',
+      example: 3,
+    }),
+    grupo: z.enum(GrupoGasto).optional().meta({
+      description: 'Válido apenas para transporte: grupo que define a seção no relatório',
+    }),  
   })
   .superRefine((dados, ctx) => {
-    if (dados.dividido && dados.categoria !== Categoria.TRANSPORTE) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'O campo "dividido" só é válido para a categoria transporte',
-        path: ['dividido'],
-      });
-    }
-    if (dados.sentido && dados.categoria !== Categoria.TRANSPORTE) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'O campo "sentido" só é válido para a categoria transporte',
-        path: ['sentido'],
-      });
+    if (dados.categoria !== Categoria.TRANSPORTE) {
+      for (const campo of ['sentido', 'divisor', 'grupo'] as const) {
+        if (dados[campo] !== undefined) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `O campo "${campo}" só é válido para a categoria transporte`,
+            path: [campo],
+          });
+        }
+      }
     }
   })
   .meta({ id: 'Gasto', description: 'Dados de um gasto financeiro' });

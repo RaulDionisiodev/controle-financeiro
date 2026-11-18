@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from 'vitest';
 import { criarGasto, gerarMensagemMensal, gerarMensagemPeriodo, listarGastos } from './gastoService.js';
 import { prisma } from '../config/prisma.js';
-import { Categoria, SentidoViagem } from '../generated/prisma/client.js';
+import { Categoria, GrupoGasto, SentidoViagem } from '../generated/prisma/client.js';
 
 describe('gastoService', () => {
   beforeEach(async () => {
@@ -31,7 +31,7 @@ describe('gastoService', () => {
       data: new Date('2026-08-04'),
       descricao: 'Uber',
       valor: 100,
-      dividido: true,
+      divisor: 2
     });
 
     const mensagem = await gerarMensagemMensal(8, 2026);
@@ -83,7 +83,8 @@ describe('gastoService', () => {
       data: new Date('2026-08-05'),
       descricao: 'Uber com a Mazé',
       valor: 60,
-      dividido: true,
+      divisor: 2,
+      grupo: GrupoGasto.IGREJA_MAZE
     });
 
     const mensagem = await gerarMensagemMensal(8, 2026);
@@ -168,5 +169,38 @@ describe('gastoService', () => {
     ].join('\n');
 
     expect(mensagem).toBe(esperado);
+  });
+
+  it('mostra a divisão por mais de 2 pessoas na seção normal de transporte', async () => {
+    await criarGasto({
+      categoria: Categoria.TRANSPORTE,
+      data: new Date('2026-08-04'),
+      descricao: 'Uber com amigos',
+      valor: 90,
+      divisor: 3,
+    });
+
+    const mensagem = await gerarMensagemMensal(8, 2026);
+
+    expect(mensagem).toContain('🚗 *Transporte*');
+    expect(mensagem).toContain('(dividido por 3: R$ 30,00)');
+    expect(mensagem).not.toContain('Igreja com a Mazé');
+    expect(mensagem).toContain('Total do período: R$ 30,00');
+  });
+
+  it('soma partes já arredondadas, para o subtotal bater com as linhas', async () => {
+    for (let i = 0; i < 2; i++) {
+      await criarGasto({
+        categoria: Categoria.TRANSPORTE,
+        data: new Date('2026-08-04'),
+        descricao: 'Uber',
+        valor: 100,
+        divisor: 3,
+      });
+    }
+
+    const mensagem = await gerarMensagemMensal(8, 2026);
+
+    expect(mensagem).toContain('Subtotal: R$ 66,66'); // 33,33 + 33,33
   });
 });

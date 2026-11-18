@@ -54,12 +54,12 @@ describe('Rotas de Gastos', () => {
         data: '2026-08-04',
         descricao: 'Mercado',
         valor: 100,
-        dividido: true,
+        divisor: 2,
       });
 
       expect(resposta.status).toBe(400);
       expect(
-        resposta.body.detalhes.some((d: { campo: string }) => d.campo === 'dividido')
+        resposta.body.detalhes.some((d: { campo: string }) => d.campo === 'divisor')
       ).toBe(true);
     });
     it('cria gasto de transporte com sentido', async () => {
@@ -145,6 +145,26 @@ describe('Rotas de Gastos', () => {
 
       expect(resposta.status).toBe(404);
     });
+
+    it('cria transporte dividido por 3 no grupo da igreja', async () => {
+      const resposta = await request(app)
+        .post('/gastos')
+        .set('Cookie', cookieAutenticado)
+        .send({ categoria: 'TRANSPORTE', data: '2026-08-04', descricao: 'Uber', valor: 90, divisor: 3, grupo: 'IGREJA_MAZE' });
+
+      expect(resposta.status).toBe(201);
+      expect(resposta.body.divisor).toBe(3);
+      expect(resposta.body.grupo).toBe('IGREJA_MAZE');
+    });
+
+    it('retorna 400 quando o divisor é menor que 2', async () => {
+      const resposta = await request(app)
+        .post('/gastos')
+        .set('Cookie', cookieAutenticado)
+        .send({ categoria: 'TRANSPORTE', data: '2026-08-04', descricao: 'Uber', valor: 90, divisor: 1 });
+
+      expect(resposta.status).toBe(400);
+    });
   });
 
   describe('DELETE /gastos/:id', () => {
@@ -182,7 +202,7 @@ describe('Rotas de Gastos', () => {
         data: '2026-08-04',
         descricao: 'Uber',
         valor: 100,
-        dividido: true,
+        divisor: 2,
       });
 
       const resposta = await request(app)
