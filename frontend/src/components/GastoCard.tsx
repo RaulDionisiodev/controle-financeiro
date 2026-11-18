@@ -1,4 +1,4 @@
-import type { Gasto } from '../types/gasto';
+import { GRUPO_LABEL, type Gasto } from '../types/gasto';
 
 const CATEGORIA_INFO: Record<Gasto['categoria'], { emoji: string; label: string }> = {
   COMPRAS: { emoji: '🛒', label: 'Compras' },
@@ -35,7 +35,8 @@ function GastoCard({ gasto, onEditar, onExcluir }: GastoCardProps) {
           <p className="text-sm text-slate-500">
             {label} · {formatarData(gasto.data)}
             {gasto.sentido && ` · ${SENTIDO_LABEL[gasto.sentido]}`}
-            {gasto.dividido && ' · Dividido'}
+            {gasto.divisor ? ` · Dividido por ${gasto.divisor}` : null}
+            {gasto.grupo && ` · ${GRUPO_LABEL[gasto.grupo]}`}
           </p>
         </div>
       </div>

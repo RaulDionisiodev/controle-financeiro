@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { Categoria, Prisma, SentidoViagem } from '../generated/prisma/client.js';
+import { Categoria, Prisma, SentidoViagem, GrupoGasto } from '../generated/prisma/client.js';
 import type { GastoInput } from '../schemas/gastoSchema.js';
 import { logger } from '../config/logger.js';
 import { Sentry } from '../config/sentry.js';
@@ -16,6 +16,10 @@ const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
+
+const GRUPO_LABELS: Record<GrupoGasto, string> = {
+  IGREJA_MAZE: '⛪️ *Igreja com a Mazé*',
+};
 
 // Espaçamento da mensagem (quantidade de linhas em branco)
 const LINHAS_APOS_TITULO = 2;
@@ -36,7 +40,8 @@ export async function criarGasto(input: GastoInput) {
       data: input.data,
       descricao: input.descricao,
       valor: input.valor,
-      dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
+      divisor: input.categoria === Categoria.TRANSPORTE ? (input.divisor ?? null) : null,
+      grupo: input.categoria === Categoria.TRANSPORTE ? (input.grupo ?? null) : null,
       sentido: input.categoria === Categoria.TRANSPORTE ? (input.sentido ?? null) : null,
     },
   });
@@ -67,7 +72,8 @@ export async function atualizarGasto(id: string, input: GastoInput) {
         data: input.data,
         descricao: input.descricao,
         valor: input.valor,
-        dividido: input.categoria === Categoria.TRANSPORTE ? (input.dividido ?? false) : null,
+        divisor: input.categoria === Categoria.TRANSPORTE ? (input.divisor ?? null) : null,
+        grupo: input.categoria === Categoria.TRANSPORTE ? (input.grupo ?? null) : null,
         sentido: input.categoria === Categoria.TRANSPORTE ? (input.sentido ?? null) : null,
       },
     });
@@ -116,23 +122,25 @@ function formatarDataLonga(data: Date): string {
 
 function renderizarSecao(
   titulo: string,
-  gastosSecao: GastoRegistro[],
-  opcoes: { dividirValor: boolean }
-): { texto: string; subtotal: number } {
-  let subtotal = 0;
+  gastosSecao: GastoRegistro[]
+): { texto: string; subtotalCentavos: number } {
+  let subtotalCentavos = 0;
   const linhas: string[] = [];
 
   for (const gasto of gastosSecao) {
     const valor = Number(gasto.valor);
-    const valorConsiderado = opcoes.dividirValor ? valor / 2 : valor;
-    subtotal += valorConsiderado;
+    const divisor = gasto.divisor && gasto.divisor > 1 ? gasto.divisor : 1;
+
+    // Cada parte é arredondada para centavos e o subtotal soma os valores já
+    // arredondados, assim ele bate com o que está escrito nas linhas
+    const parteCentavos = Math.round((valor * 100) / divisor);
+    subtotalCentavos += parteCentavos;
 
     const descricao = gasto.sentido
       ? `${gasto.descricao} (${ROTULO_SENTIDO[gasto.sentido]})`
       : gasto.descricao;
-    const sufixo = opcoes.dividirValor
-      ? ` (dividido - 50%: ${formatarMoeda(valorConsiderado)})`
-      : '';
+    const sufixo =
+      divisor > 1 ? ` (dividido por ${divisor}: ${formatarMoeda(parteCentavos / 100)})` : '';
 
     linhas.push(
       `- *${formatarData(gasto.data)}* - ${descricao}: ${formatarMoeda(valor)}${sufixo}`
@@ -143,9 +151,9 @@ function renderizarSecao(
     `${titulo}\n` +
     linhas.join('\n') +
     linhasEmBranco(LINHAS_ANTES_SUBTOTAL) +
-    `*Subtotal: ${formatarMoeda(subtotal)}*`;
+    `*Subtotal: ${formatarMoeda(subtotalCentavos / 100)}*`;
 
-  return { texto, subtotal };
+  return { texto, subtotalCentavos };
 }
 
 export async function gerarMensagemPeriodo(
@@ -165,30 +173,29 @@ export async function gerarMensagemPeriodo(
   }
 
   const secoes: string[] = [];
-  let totalGeral = 0;
+  let totalCentavos = 0;
 
-  function adicionarSecao(tituloSecao: string, gastosSecao: GastoRegistro[], dividirValor: boolean) {
-    const secao = renderizarSecao(tituloSecao, gastosSecao, { dividirValor });
+  function adicionarSecao(tituloSecao: string, gastosSecao: GastoRegistro[]) {
+    const secao = renderizarSecao(tituloSecao, gastosSecao);
     secoes.push(secao.texto);
-    totalGeral += secao.subtotal;
+    totalCentavos += secao.subtotalCentavos;
   }
 
   for (const categoria of Object.values(Categoria)) {
-    const gastosCategoria = gastos.filter((g) => g.categoria === categoria);
-    if (gastosCategoria.length === 0) continue;
+    const daCategoria = gastos.filter((g) => g.categoria === categoria);
+    if (daCategoria.length === 0) continue;
 
     const { emoji, nome } = CATEGORIA_LABELS[categoria];
 
-    if (categoria === Categoria.TRANSPORTE) {
-      const naoDivididos = gastosCategoria.filter((g) => !g.dividido);
-      const divididos = gastosCategoria.filter((g) => g.dividido);
+    // Sem grupo: seção da própria categoria (mostrando a divisão, se houver)
+    const semGrupo = daCategoria.filter((g) => !g.grupo);
+    if (semGrupo.length > 0) adicionarSecao(`${emoji} *${nome}*`, semGrupo);
 
-      if (naoDivididos.length > 0) adicionarSecao(`${emoji} *${nome}*`, naoDivididos, false);
-      if (divididos.length > 0) adicionarSecao('⛪️ *Igreja com a Mazé*', divididos, true);
-      continue;
+    // Com grupo: seção própria, logo após a da categoria
+    for (const grupo of Object.values(GrupoGasto)) {
+      const doGrupo = daCategoria.filter((g) => g.grupo === grupo);
+      if (doGrupo.length > 0) adicionarSecao(GRUPO_LABELS[grupo], doGrupo);
     }
-
-    adicionarSecao(`${emoji} *${nome}*`, gastosCategoria, false);
   }
 
   return (
@@ -196,7 +203,7 @@ export async function gerarMensagemPeriodo(
     linhasEmBranco(LINHAS_APOS_TITULO) +
     secoes.join(linhasEmBranco(LINHAS_ENTRE_SECOES)) +
     linhasEmBranco(LINHAS_ENTRE_SECOES) +
-    `💰 *Total do período: ${formatarMoeda(totalGeral)}*`
+    `💰 *Total do período: ${formatarMoeda(totalCentavos / 100)}*`
   );
 }
 

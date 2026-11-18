@@ -24,6 +24,10 @@ enum Categoria {
   TRANSPORTE
 }
 
+enum GrupoGasto {
+  IGREJA_MAZE
+}
+
 model Gasto {
   id          String    @id @default(uuid())
   categoria   Categoria
@@ -31,6 +35,8 @@ model Gasto {
   descricao   String
   valor       Decimal   @db.Decimal(10, 2)
   dividido    Boolean?
+  divisor      Int?
+  grupo        GrupoGasto?
   sentido      SentidoViagem?
   criadoEm    DateTime  @default(now())
   atualizadoEm DateTime @updatedAt
